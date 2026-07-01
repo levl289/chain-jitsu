@@ -1,0 +1,218 @@
+@if (loadError()) {
+  <mat-card appearance="outlined" class="notice error">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ loadError() }}</span>
+  </mat-card>
+} @else if (!cards.loaded()) {
+  <div class="loading">
+    <mat-progress-bar mode="indeterminate" />
+    <p>Loading the deck…</p>
+  </div>
+} @else if (!game.started()) {
+  <!-- ============ SETUP: belt selection ============ -->
+  <section class="setup">
+    <h1 class="page-title">Choose your level</h1>
+    <p class="page-sub">
+      Belt levels are cumulative. Free-for-all also includes AI-generated cards.
+    </p>
+
+    <div class="belt-grid">
+      @for (opt of beltOptions; track opt.label) {
+        <button
+          type="button"
+          class="belt-option"
+          [class.selected]="selectedBelt() === opt.value"
+          (click)="selectedBelt.set(opt.value)"
+        >
+          @if (opt.value === null) {
+            <mat-icon class="belt-option-icon">all_inclusive</mat-icon>
+          } @else {
+            <app-belt-bar class="belt-option-bar" [belt]="opt.value" />
+          }
+          <span class="belt-label">{{ opt.label }}</span>
+          <span class="belt-hint">{{ opt.hint }}</span>
+        </button>
+      }
+    </div>
+
+    <button mat-flat-button color="primary" class="start-btn" (click)="startGame()">
+      <mat-icon>play_arrow</mat-icon>
+      Start drilling
+    </button>
+  </section>
+} @else {
+  <!-- ============ IN GAME ============ -->
+  <section class="scoreboard">
+    <div class="score-block">
+      <div class="score-value">{{ game.totalScore() }}</div>
+      <div class="score-label">points banked</div>
+    </div>
+    <div class="score-meta">
+      <span class="belt-chip">
+        @if (game.isFreeForAll()) {
+          <mat-icon class="belt-chip-icon">all_inclusive</mat-icon>
+        } @else {
+          <app-belt-bar [belt]="game.belt()!" />
+        }
+        {{ activeBeltLabel() }}
+      </span>
+      <span class="progress-text">
+        {{ game.progress().played }} / {{ game.progress().total }} cards played
+      </span>
+    </div>
+    <div class="score-actions">
+      <button mat-button class="score-action" (click)="game.resetGame()">
+        <mat-icon>restart_alt</mat-icon>
+        Reset
+      </button>
+      <button mat-button class="score-action" (click)="game.exitGame()">
+        <mat-icon>tune</mat-icon>
+        Level
+      </button>
+    </div>
+  </section>
+
+  @switch (game.phase()) {
+    <!-- -------- selecting a start position -------- -->
+    @case ('selecting') {
+      @if (game.availableStartNodes().length === 0) {
+        <mat-card appearance="outlined" class="notice">
+          <mat-icon>celebration</mat-icon>
+          <div>
+            <strong>Deck complete!</strong>
+            <p>You've played every card at this level. Reset to run through again.</p>
+            <button mat-flat-button color="primary" (click)="game.resetGame()">
+              <mat-icon>restart_alt</mat-icon> Reset deck
+            </button>
+          </div>
+        </mat-card>
+      } @else {
+        <h2 class="section-title">Pick a starting position</h2>
+        <ng-container [ngTemplateOutlet]="startGrid" />
+      }
+    }
+
+    <!-- -------- playing: choose a card -------- -->
+    @case ('playing') {
+      <div class="current-banner">
+        <div class="cb-main">
+          <span class="cb-label">Current position</span>
+          <span class="cb-node">{{ nodeLabel(game.currentNode()!) }}</span>
+        </div>
+        <div class="cb-seq" [class.has-score]="game.sequenceScore() > 0">
+          +{{ game.sequenceScore() }}
+        </div>
+      </div>
+
+      @if (game.path().length > 0) {
+        <div class="breadcrumb">
+          @for (step of game.path(); track $index) {
+            <span class="crumb">{{ step.card.technique }}</span>
+            <mat-icon class="crumb-arrow">chevron_right</mat-icon>
+          }
+          <span class="crumb crumb-current">{{ game.currentNode()!.position }}?</span>
+        </div>
+      }
+
+      <h2 class="section-title">
+        Legal cards
+        <span class="count-badge">{{ game.legalCards().length }}</span>
+      </h2>
+
+      <div class="card-list">
+        @for (card of game.legalCards(); track card.cardId) {
+          <button type="button" class="play-card" (click)="openCard(card, true)">
+            <span class="pc-class" [attr.data-class]="card.class">
+              <mat-icon>{{ classIcon(card.class) }}</mat-icon>
+            </span>
+            <span class="pc-body">
+              <span class="pc-tech">{{ card.technique }}</span>
+              <span class="pc-sub">
+                <span class="pc-leads">→ {{ card.leadsTo }}</span>
+                @if (card.aiGenerated) {
+                  <span class="pc-ai" title="AI-generated">AI</span>
+                }
+              </span>
+            </span>
+            @if (card.points > 0) {
+              <span class="pc-points">+{{ card.points }}</span>
+            }
+          </button>
+        }
+      </div>
+
+      <button mat-stroked-button class="stop-btn" (click)="game.stopSequence()">
+        <mat-icon>stop</mat-icon>
+        Stop sequence
+      </button>
+    }
+
+    <!-- -------- ended: sequence summary -------- -->
+    @case ('ended') {
+      <mat-card appearance="outlined" class="summary">
+        <div class="summary-head" [attr.data-reason]="game.endReason()">
+          <mat-icon>{{ game.endReason() === 'finish' ? 'emoji_events' : 'flag' }}</mat-icon>
+          <div>
+            <div class="summary-msg">{{ endMessage() }}</div>
+            <div class="summary-score">Sequence value: +{{ game.sequenceScore() }}</div>
+          </div>
+        </div>
+
+        <ol class="summary-path">
+          @for (step of game.path(); track $index) {
+            <li>
+              <button type="button" class="path-item" (click)="openCard(step.card, false)">
+                <mat-icon class="pi-class" [attr.data-class]="step.card.class">
+                  {{ classIcon(step.card.class) }}
+                </mat-icon>
+                <span class="pi-tech">{{ step.card.technique }}</span>
+                @if (step.points > 0) {
+                  <span class="pi-points">+{{ step.points }}</span>
+                }
+                <span class="pi-leads">→ {{ step.card.leadsTo }}</span>
+              </button>
+            </li>
+          }
+        </ol>
+
+        <div class="summary-actions">
+          <button mat-flat-button color="primary" (click)="game.markPlayed()">
+            <mat-icon>done_all</mat-icon>
+            Mark played
+          </button>
+          <button mat-stroked-button (click)="game.restartSequence()">
+            <mat-icon>replay</mat-icon>
+            Restart
+          </button>
+        </div>
+      </mat-card>
+
+      @if (game.endReason() === 'open' || game.endReason() === 'stuck') {
+        @if (game.availableStartNodes().length > 0) {
+          <h2 class="section-title">Continue this run from…</h2>
+          <ng-container [ngTemplateOutlet]="startGrid" />
+        }
+      }
+    }
+  }
+}
+
+<!-- Start-position grid: positions grouped so top/bottom variants share one split pill. -->
+<ng-template #startGrid>
+  <div class="node-grid">
+    @for (group of startGroups(); track group.position) {
+      <div class="node-group" [class.split]="group.roles.length > 1">
+        <span class="ng-position">{{ group.position }}</span>
+        <div class="role-split">
+          @for (role of group.roles; track role.node.role) {
+            <button type="button" class="role-half" (click)="pickStart(role.node)">
+              <span class="rh-role">{{ role.node.role }}</span>
+              <span class="rh-count">{{ role.count }} cards</span>
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</ng-template>
+

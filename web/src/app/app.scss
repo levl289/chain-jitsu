@@ -1,0 +1,33 @@
+.app-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  gap: 8px;
+}
+
+.brand-icon {
+  margin-right: 4px;
+}
+
+.brand {
+  font-weight: 500;
+  font-size: 1.05rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-header {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.menu-name {
+  font-weight: 500;
+}
+
+.menu-role {
+  font-size: 0.8rem;
+  text-transform: capitalize;
+  color: var(--mat-sys-on-surface-variant);
+}

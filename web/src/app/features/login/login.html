@@ -1,0 +1,61 @@
+<div class="login-wrap">
+  <mat-card appearance="outlined" class="login-card">
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="login-avatar">sports_kabaddi</mat-icon>
+      <mat-card-title>BTT Position Cards</mat-card-title>
+      <mat-card-subtitle>Sign in to drill</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form (ngSubmit)="submit()" class="login-form">
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Username</mat-label>
+          <input
+            matInput
+            name="username"
+            autocomplete="username"
+            autocapitalize="none"
+            [ngModel]="username()"
+            (ngModelChange)="username.set($event)"
+            required
+          />
+          <mat-icon matPrefix>person</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Password</mat-label>
+          <input
+            matInput
+            type="password"
+            name="password"
+            autocomplete="current-password"
+            [ngModel]="password()"
+            (ngModelChange)="password.set($event)"
+            required
+          />
+          <mat-icon matPrefix>lock</mat-icon>
+        </mat-form-field>
+
+        @if (error()) {
+          <p class="login-error" role="alert">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ error() }}</span>
+          </p>
+        }
+
+        <button
+          mat-flat-button
+          color="primary"
+          type="submit"
+          class="full submit"
+          [disabled]="busy() || !username() || !password()"
+        >
+          Sign in
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

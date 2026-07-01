@@ -1,0 +1,69 @@
+@use '@angular/material' as mat;
+
+// Material 3 theme (Angular Material 20 `mat.theme` API).
+html {
+  color-scheme: light;
+  @include mat.theme((
+    color: (
+      theme-type: light,
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+
+  // App-level color tokens derived from the M3 system.
+  --app-bg: var(--mat-sys-surface);
+  --app-on-bg: var(--mat-sys-on-surface);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-on-bg);
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  // Respect device safe areas (notches) on mobile.
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+// Constrain content to a comfortable mobile-first column, centered on wide screens.
+.app-container {
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+// Ensure overlay surfaces are opaque and the scrim is visible. Belt-and-braces
+// in case component surface tokens don't resolve to a concrete colour.
+.cdk-overlay-dark-backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.mat-mdc-dialog-container {
+  --mdc-dialog-container-color: var(--mat-sys-surface-container-high);
+}
+
+.mat-mdc-dialog-surface {
+  background-color: var(--mat-sys-surface-container-high);
+}
+
+.mat-mdc-menu-panel {
+  background-color: var(--mat-sys-surface-container-high);
+}

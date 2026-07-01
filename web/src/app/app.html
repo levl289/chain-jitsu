@@ -1,0 +1,25 @@
+<mat-toolbar color="primary" class="app-toolbar">
+  <mat-icon class="brand-icon" aria-hidden="true">sports_kabaddi</mat-icon>
+  <span class="brand">BTT Position Cards</span>
+  <span class="spacer"></span>
+
+  @if (auth.user(); as user) {
+    <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Account menu">
+      <mat-icon>account_circle</mat-icon>
+    </button>
+    <mat-menu #menu="matMenu">
+      <div class="menu-header">
+        <div class="menu-name">{{ user.displayName }}</div>
+        <div class="menu-role">{{ user.role }}</div>
+      </div>
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Log out</span>
+      </button>
+    </mat-menu>
+  }
+</mat-toolbar>
+
+<main class="app-container">
+  <router-outlet />
+</main>

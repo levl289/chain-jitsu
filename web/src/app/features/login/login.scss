@@ -1,0 +1,45 @@
+.login-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 8vh;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+}
+
+.login-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  border-radius: 50%;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.full {
+  width: 100%;
+}
+
+.submit {
+  margin-top: 8px;
+  height: 48px;
+}
+
+.login-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--mat-sys-error);
+  font-size: 0.9rem;
+  margin: 0 0 8px;
+}
