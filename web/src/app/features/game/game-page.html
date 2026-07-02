@@ -44,8 +44,8 @@
   <!-- ============ IN GAME ============ -->
   <section class="scoreboard">
     <div class="score-block">
-      <div class="score-value">{{ game.totalScore() }}</div>
-      <div class="score-label">points banked</div>
+      <div class="score-value">{{ game.sequenceScore() }}</div>
+      <div class="score-label">points this play</div>
     </div>
     <div class="score-meta">
       <span class="belt-chip">
@@ -98,9 +98,6 @@
         <div class="cb-main">
           <span class="cb-label">Current position</span>
           <span class="cb-node">{{ nodeLabel(game.currentNode()!) }}</span>
-        </div>
-        <div class="cb-seq" [class.has-score]="game.sequenceScore() > 0">
-          +{{ game.sequenceScore() }}
         </div>
       </div>
 

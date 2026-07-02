@@ -1,4 +1,12 @@
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -118,12 +126,67 @@ export class GamePageComponent implements OnInit {
     return list.sort((a, b) => a.position.localeCompare(b.position));
   });
 
+  /**
+   * Navigation depth for the device/browser Back button: 0 = level selector,
+   * 1 = the deck (start-position picker), 2 = an in-progress run (playing/ended).
+   */
+  readonly navLevel = computed(() => {
+    if (!this.game.started()) {
+      return 0;
+    }
+    return this.game.phase() === 'selecting' ? 1 : 2;
+  });
+
+  /** Count of synthetic history entries we've pushed to trap the Back button. */
+  private guards = 0;
+  /** True while we're programmatically unwinding history (ignore our own popstate). */
+  private syncing = false;
+
   constructor() {
     // Keep per-user notes namespaced to the logged-in user.
     effect(() => {
       const user = this.auth.user();
       this.notes.setUser(user?.username ?? 'anon');
     });
+
+    // Keep synthetic history entries in sync with the nav depth so the Back
+    // button walks run → deck → selector instead of leaving the app. Pushing a
+    // state never fires popstate; unwinding (history.go) is guarded by `syncing`.
+    effect(() => {
+      const target = this.navLevel();
+      if (this.syncing) {
+        return;
+      }
+      while (this.guards < target) {
+        this.guards++;
+        history.pushState({ btt: 1 }, '');
+      }
+      if (this.guards > target) {
+        const excess = this.guards - target;
+        this.guards = target;
+        this.syncing = true;
+        history.go(-excess);
+        setTimeout(() => (this.syncing = false));
+      }
+    });
+  }
+
+  /** Device/browser Back: step up one nav level rather than leaving the app. */
+  @HostListener('window:popstate')
+  onPopState(): void {
+    if (this.syncing) {
+      return;
+    }
+    if (this.guards > 0) {
+      this.guards--;
+    }
+    const level = this.navLevel();
+    if (level >= 2) {
+      this.game.returnToDeck(); // run → deck
+    } else if (level === 1) {
+      this.game.exitGame(); // deck → level selector
+    }
+    // level 0: nothing trapped, let the browser navigate away.
   }
 
   async ngOnInit(): Promise<void> {

@@ -5,6 +5,25 @@
   gap: 8px;
 }
 
+.brand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.brand-btn:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
 .brand-icon {
   margin-right: 4px;
 }

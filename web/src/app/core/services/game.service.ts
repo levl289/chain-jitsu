@@ -28,7 +28,6 @@ export class GameService {
   private readonly startedSig = signal(false);
   private readonly phaseSig = signal<GamePhase>('selecting');
   private readonly playedSig = signal<ReadonlySet<string>>(new Set());
-  private readonly totalScoreSig = signal(0);
 
   private readonly currentNodeSig = signal<GameNode | null>(null);
   private readonly sequenceStartSig = signal<GameNode | null>(null);
@@ -41,7 +40,6 @@ export class GameService {
   readonly started = this.startedSig.asReadonly();
   readonly phase = this.phaseSig.asReadonly();
   readonly played = this.playedSig.asReadonly();
-  readonly totalScore = this.totalScoreSig.asReadonly();
   readonly currentNode = this.currentNodeSig.asReadonly();
   readonly path = this.pathSig.asReadonly();
   readonly endReason = this.endReasonSig.asReadonly();
@@ -49,7 +47,11 @@ export class GameService {
 
   readonly isFreeForAll = computed(() => this.beltSig() === null);
 
-  /** Score accumulated in the current (uncommitted) sequence. */
+  /**
+   * Points earned in the current run/series. Deliberately NOT cumulative across
+   * separate plays — a single demonstration's points don't carry over, so this
+   * resets to 0 whenever the sequence is cleared (marked played, restarted, etc.).
+   */
   readonly sequenceScore = computed(() =>
     this.pathSig().reduce((sum, step) => sum + step.points, 0),
   );
@@ -107,15 +109,13 @@ export class GameService {
     this.beltSig.set(belt);
     this.startedSig.set(true);
     this.playedSig.set(new Set());
-    this.totalScoreSig.set(0);
     this.resetSequenceState();
     this.phaseSig.set('selecting');
   }
 
-  /** Reset the played deck and score but keep the current belt and stay in-game. */
+  /** Reset the played deck but keep the current belt and stay in-game. */
   resetGame(): void {
     this.playedSig.set(new Set());
-    this.totalScoreSig.set(0);
     this.resetSequenceState();
     this.phaseSig.set('selecting');
   }
@@ -190,14 +190,25 @@ export class GameService {
     }
   }
 
-  /** Commit every card in the current path to the played set and bank the score. */
+  /**
+   * Abandon the current sequence and return to start-position selection.
+   * Nothing is consumed and no score is kept (used by the Back button).
+   */
+  returnToDeck(): void {
+    this.resetSequenceState();
+    this.phaseSig.set('selecting');
+  }
+
+  /**
+   * Commit every card in the current path to the played set. The sequence score
+   * is intentionally not carried forward — it resets with the sequence state.
+   */
   markPlayed(): void {
     const next = new Set(this.playedSig());
     for (const step of this.pathSig()) {
       next.add(step.card.cardId);
     }
     this.playedSig.set(next);
-    this.totalScoreSig.update((s) => s + this.sequenceScore());
     this.resetSequenceState();
     this.phaseSig.set('selecting');
   }

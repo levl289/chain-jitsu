@@ -1,6 +1,8 @@
 <mat-toolbar color="primary" class="app-toolbar">
-  <mat-icon class="brand-icon" aria-hidden="true">sports_kabaddi</mat-icon>
-  <span class="brand">BTT Position Cards</span>
+  <button type="button" class="brand-btn" (click)="goHome()" aria-label="Back to level selection">
+    <mat-icon class="brand-icon" aria-hidden="true">sports_kabaddi</mat-icon>
+    <span class="brand">BTT Position Cards</span>
+  </button>
   <span class="spacer"></span>
 
   @if (auth.user(); as user) {
