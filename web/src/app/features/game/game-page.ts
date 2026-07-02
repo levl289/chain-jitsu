@@ -71,7 +71,7 @@ export class GamePageComponent implements OnInit {
   readonly nodeKey = nodeKey;
 
   readonly beltOptions: BeltOption[] = [
-    { value: null, label: 'Free-for-all', hint: 'Every card, all belts + AI-generated' },
+    { value: null, label: 'Free-for-all', hint: 'Every card, all belts + supplemental' },
     ...BELT_LEVELS.map((b) => ({
       value: b,
       label: formatBelt(b),

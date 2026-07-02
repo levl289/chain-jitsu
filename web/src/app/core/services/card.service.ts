@@ -10,65 +10,16 @@ import {
   TechniqueClass,
   beltRank,
   nodeKey,
+  splitPositionRole,
 } from '../models/card.model';
 
-/** Result of resolving a card's `leads_to` into the next state-machine state. */
+/** Result of resolving a card's End Position into the next state-machine state. */
 export type Outcome =
   | { type: 'finish'; label: string } // submission / round-ending finish
-  | { type: 'node'; node: GameNode } // cleanly resolved to a concrete node
+  | { type: 'node'; node: GameNode } // End Position matches a real playable node
   | { type: 'open'; label: string }; // reached a state with no concrete follow-up node
 
 const CSV_URL = 'data/cards.csv';
-
-/**
- * Aliases mapping a (messy) `leads_to` label to a canonical deck position name.
- * Only the labels that correspond to a real playable position are listed; anything
- * unmapped resolves to an `open` outcome (player continues manually or ends).
- */
-const POSITION_ALIASES: Record<string, string> = {
-  'side control': 'Side Control',
-  'side control / back': 'Side Control',
-  'side control / escape': 'Side Control',
-  mount: 'Mount',
-  's mount': 'Mount',
-  'technical mount': 'Mount',
-  back: 'Back Control',
-  'back control': 'Back Control',
-  'north south': 'North South',
-  'knee on belly': 'Knee on Belly',
-  'knee on belly / side control': 'Knee on Belly',
-  'open guard': 'Open Guard',
-  'open guard control': 'Open Guard',
-  'recover open guard': 'Open Guard',
-  'seated guard': 'Open Guard',
-  'seated/open guard': 'Open Guard',
-  'closed guard': 'Closed Guard',
-  'closed guard control': 'Closed Guard',
-  'half guard': 'Half Guard',
-  'knee shield half': 'Half Guard',
-  'side-facing half guard': 'Half Guard',
-  'reverse half guard': 'Reverse Half Guard',
-  'deep half': 'Deep Half',
-  'butterfly guard': 'Butterfly Guard',
-  'x guard': 'X Guard / SLX',
-  slx: 'X Guard / SLX',
-  'spider guard': 'Spider Guard',
-  'lasso guard': 'Lasso Guard',
-  rdlr: 'Reverse De La Riva',
-  'turtle control': 'Turtle',
-  'front headlock': 'Front Headlock',
-  '50/50': '50/50',
-};
-
-/** `leads_to` labels (or classes) that end the round as a finish/submission. */
-const FINISH_LABELS = new Set([
-  'finish',
-  'triangle',
-  'armbar',
-  'kimura',
-  'omoplata',
-  'crucifix',
-]);
 
 @Injectable({ providedIn: 'root' })
 export class CardService {
@@ -107,7 +58,9 @@ export class CardService {
         this.http.get(CSV_URL, { responseType: 'text' }),
       );
       const rows = parseCsv(text);
-      this.cardsSig.set(rows.map(toCard).filter((c) => c.cardId));
+      this.cardsSig.set(
+        rows.map(toCard).filter((c) => c.position && c.technique),
+      );
       this.loadedSig.set(true);
     })();
     return this.loadPromise;
@@ -134,10 +87,10 @@ export class CardService {
   /** True if the card is available under the given belt filter. */
   matchesBelt(card: Card, belt: BeltLevel | null): boolean {
     if (belt === null) {
-      return true; // free-for-all shows everything, including AI-generated cards
+      return true; // free-for-all shows everything, including supplemental cards
     }
     if (card.beltLevel === '') {
-      return false; // blank/AI cards are hidden in belt mode
+      return false; // supplemental cards are hidden in belt mode
     }
     return beltRank(card.beltLevel) <= beltRank(belt);
   }
@@ -153,58 +106,22 @@ export class CardService {
   }
 
   /**
-   * Resolves the next state after playing `card`, mapping its `leads_to` label to a
-   * concrete node when possible.
+   * Resolves the next state after playing `card`. Because the simplified CSV's
+   * End Position is either "Finish" or (often) a real Start Position like
+   * "Mount Top", resolution is a direct node lookup — no alias mapping needed.
+   * An End Position that isn't a playable start node (e.g. "Top Position",
+   * "Standup", "Armbar") resolves to an `open` outcome the player continues manually.
    */
   resolveOutcome(card: Card): Outcome {
-    const label = card.leadsTo.trim();
-    const key = label.toLowerCase();
-
-    if (card.class === 'Submission' || FINISH_LABELS.has(key)) {
+    const label = card.endPosition.trim();
+    if (card.class === 'Submission' || label.toLowerCase() === 'finish') {
       return { type: 'finish', label: label || 'Finish' };
     }
-
-    // Try to map the label to a canonical position, honouring compound "a / b" labels.
-    const position = this.mapPosition(key);
-    if (!position) {
-      return { type: 'open', label };
+    const { position, role } = splitPositionRole(label);
+    if (this.nodeExists(position, role)) {
+      return { type: 'node', node: { position, role } };
     }
-
-    const role = this.resultRole(card, position);
-    return { type: 'node', node: { position, role } };
-  }
-
-  private mapPosition(key: string): string | null {
-    if (POSITION_ALIASES[key]) {
-      return POSITION_ALIASES[key];
-    }
-    // Compound labels like "guard / side control": take the first segment that maps.
-    for (const part of key.split('/').map((p) => p.trim())) {
-      if (POSITION_ALIASES[part]) {
-        return POSITION_ALIASES[part];
-      }
-    }
-    return null;
-  }
-
-  /** Determines which role the acting player holds after the card resolves. */
-  private resultRole(card: Card, position: string): PlayerRole {
-    const offensiveTop: TechniqueClass[] = ['Sweep', 'Pass', 'Guard Open'];
-    let role: PlayerRole;
-    if (offensiveTop.includes(card.class)) {
-      role = 'top';
-    } else {
-      role = card.role; // transitions/defense keep the acting player's side
-    }
-    // If the deck has no start node for the computed role but has the opposite,
-    // fall back to whichever role actually exists so the chain can continue.
-    if (!this.nodeExists(position, role)) {
-      const other: PlayerRole = role === 'top' ? 'bottom' : 'top';
-      if (this.nodeExists(position, other)) {
-        return other;
-      }
-    }
-    return role;
+    return { type: 'open', label };
   }
 
   private nodeExists(position: string, role: PlayerRole): boolean {
@@ -215,42 +132,22 @@ export class CardService {
 }
 
 function toCard(r: Record<string, string>): Card {
-  const beltLevel = (r['belt_level'] ?? '').trim() as Card['beltLevel'];
-  const points = Number.parseInt(r['points'] ?? '', 10);
+  const { position, role } = splitPositionRole(r['Start Position'] ?? '');
+  const beltLevel = (r['Belt Level'] ?? '').trim() as Card['beltLevel'];
+  const points = Number.parseInt(r['Points'] ?? '', 10);
+  const cls = (r['Class'] ?? '').trim() as TechniqueClass;
+  const technique = (r['Technique'] ?? '').trim();
+  const endPosition = (r['End Position'] ?? '').trim();
   return {
-    cardId: (r['card_id'] ?? '').trim(),
-    techniqueSlug: r['technique_slug'] ?? '',
-    cardType: r['card_type'] ?? '',
-    deck: r['deck'] ?? '',
-    gamePile: r['game_pile'] ?? '',
-    position: (r['position'] ?? '').trim(),
-    subposition: r['subposition'] ?? '',
-    role: ((r['player_role'] ?? '').trim() as PlayerRole) || 'neutral',
-    class: (r['class'] ?? '').trim() as TechniqueClass,
-    technique: r['technique'] ?? '',
-    leadsTo: r['leads_to'] ?? '',
+    cardId: `${position}|${role}|${cls}|${technique}|${endPosition}`,
+    position,
+    role,
+    class: cls,
+    technique,
+    endPosition,
     points: Number.isFinite(points) ? points : 0,
-    pointBasis: r['point_basis'] ?? '',
-    scoreComponents: r['score_components'] ?? '',
-    requiresStabilization: r['requires_stabilization'] ?? '',
     beltLevel,
-    testPriority: r['test_priority'] ?? '',
-    frontText: r['front_text'] ?? '',
-    backGoal: r['back_goal'] ?? '',
-    setupPrompt: r['setup_prompt'] ?? '',
-    keyControls: r['key_controls'] ?? '',
-    executionPrompt: r['execution_prompt'] ?? '',
-    opponentReactionPrompt: r['opponent_reaction_prompt'] ?? '',
-    commonFailures: r['common_failures'] ?? '',
-    followUpPrompt: r['follow_up_prompt'] ?? '',
-    skillCheck: r['skill_check'] ?? '',
-    safetyNote: r['safety_note'] ?? '',
-    backText: r['back_text'] ?? '',
-    videoSearchQuery: r['video_search_query'] ?? '',
-    videoUrl: r['video_url'] ?? '',
-    instructorNotes: r['instructor_notes'] ?? '',
-    detailStatus: r['detail_status'] ?? '',
-    tags: r['tags'] ?? '',
-    aiGenerated: beltLevel === '',
+    notes: (r['Notes'] ?? '').trim(),
+    supplemental: beltLevel === '',
   };
 }

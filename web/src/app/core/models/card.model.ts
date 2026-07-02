@@ -1,45 +1,28 @@
 /**
  * Domain model for a single BJJ position card.
  *
- * One CSV row === one card === one legal action from one (position, role) node.
- * Field names mirror the source CSV columns so the CSV stays the source of truth.
+ * One CSV row === one card === one legal action (technique) from one start node.
+ * The source CSV is intentionally small — see docs/bjj_position_card_game_simple_csv_handoff_v3.md.
+ * Columns: Start Position, Class, Technique, End Position, Points, Belt Level, Notes.
  */
 export interface Card {
+  /** Synthesized stable id (the CSV has no id column). Used for notes + played-set tracking. */
   cardId: string;
-  techniqueSlug: string;
-  cardType: string; // test_atomic | supplemental_atomic | defense
-  deck: string;
-  gamePile: string;
+  /** Position without perspective, e.g. "Closed Guard", "Mount", "X Guard / SLX". */
   position: string;
-  subposition: string;
+  /** Perspective parsed from the Start Position suffix. */
   role: PlayerRole;
   class: TechniqueClass;
   technique: string;
-  leadsTo: string;
+  /** Optimal resulting position ("End Position"); "Finish" ends the sequence. */
+  endPosition: string;
   points: number;
-  pointBasis: string;
-  scoreComponents: string;
-  requiresStabilization: string; // Yes | No | N/A
-  beltLevel: BeltLevel | ''; // '' === AI-generated / supplemental (no belt source)
-  testPriority: string;
-  frontText: string;
-  backGoal: string;
-  setupPrompt: string;
-  keyControls: string;
-  executionPrompt: string;
-  opponentReactionPrompt: string;
-  commonFailures: string;
-  followUpPrompt: string;
-  skillCheck: string;
-  safetyNote: string;
-  backText: string;
-  videoSearchQuery: string;
-  videoUrl: string;
-  instructorNotes: string;
-  detailStatus: string;
-  tags: string;
-  /** True when beltLevel is blank — i.e. this row was AI-generated, not from belt-test source material. */
-  aiGenerated: boolean;
+  /** '' when the row is supplemental (not from the belt-test source). */
+  beltLevel: BeltLevel | '';
+  /** Optional instructor-facing note from the CSV. */
+  notes: string;
+  /** True when Belt Level is blank — supplemental / broader-curriculum row. */
+  supplemental: boolean;
 }
 
 export type PlayerRole = 'bottom' | 'top' | 'neutral';
@@ -69,6 +52,33 @@ export function beltRank(belt: BeltLevel): number {
 /** Render a belt label with a real arrow, e.g. "Brown->Black" -> "Brown → Black". */
 export function formatBelt(belt: string): string {
   return belt.replace(/\s*->\s*/, ' → ');
+}
+
+const ROLE_SUFFIXES: Record<string, PlayerRole> = {
+  Top: 'top',
+  Bottom: 'bottom',
+  Neutral: 'neutral',
+};
+
+/**
+ * Splits a "Start Position" / "End Position" string into a position + role.
+ * Every playable node in the source ends with " Top", " Bottom" or " Neutral"
+ * (e.g. "X Guard / SLX Bottom"); anything else is treated as a role-less
+ * generic position (e.g. "Top Position", "Standup", "Finish").
+ */
+export function splitPositionRole(raw: string): {
+  position: string;
+  role: PlayerRole;
+} {
+  const trimmed = raw.trim();
+  const idx = trimmed.lastIndexOf(' ');
+  if (idx > 0) {
+    const role = ROLE_SUFFIXES[trimmed.slice(idx + 1)];
+    if (role) {
+      return { position: trimmed.slice(0, idx).trim(), role };
+    }
+  }
+  return { position: trimmed, role: 'neutral' };
 }
 
 /** A concrete state-machine node: a position played from a given role. */

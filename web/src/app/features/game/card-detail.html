@@ -4,9 +4,9 @@
     @if (card.points > 0) {
       <span class="cd-chip cd-points">+{{ card.points }}</span>
     }
-    @if (card.aiGenerated) {
-      <span class="cd-chip cd-ai" title="AI-generated — not from belt-test source">
-        <mat-icon>smart_toy</mat-icon> AI
+    @if (card.supplemental) {
+      <span class="cd-chip cd-ai" title="Supplemental — not from the belt-test source">
+        <mat-icon>auto_stories</mat-icon> Supplemental
       </span>
     } @else if (card.beltLevel) {
       <app-belt-bar class="cd-beltbar" [belt]="card.beltLevel" />
@@ -18,30 +18,22 @@
 </div>
 
 <h2 mat-dialog-title class="cd-title">{{ card.technique }}</h2>
-<p class="cd-position">{{ card.position }} · {{ card.role }} → <strong>{{ card.leadsTo }}</strong></p>
+<p class="cd-position">
+  {{ card.position }} · {{ card.role }} → <strong>{{ card.endPosition }}</strong>
+</p>
 
 <mat-dialog-content class="cd-content">
-  @if (card.pointBasis) {
-    <div class="cd-basis">
-      <mat-icon>calculate</mat-icon>
-      <span>{{ card.pointBasis }}</span>
-      @if (card.requiresStabilization === 'Yes') {
-        <span class="cd-stab">requires stabilization</span>
-      }
-    </div>
-  }
-
-  @for (row of details(); track row.label) {
+  @if (card.notes) {
     <div class="cd-row">
-      <mat-icon class="cd-row-icon">{{ row.icon }}</mat-icon>
+      <mat-icon class="cd-row-icon">sticky_note_2</mat-icon>
       <div class="cd-row-body">
-        <div class="cd-row-label">{{ row.label }}</div>
-        <div class="cd-row-value">{{ row.value }}</div>
+        <div class="cd-row-label">Instructor note</div>
+        <div class="cd-row-value">{{ card.notes }}</div>
       </div>
     </div>
-  }
 
-  <mat-divider class="cd-divider" />
+    <mat-divider class="cd-divider" />
+  }
 
   <mat-form-field appearance="outline" class="cd-note">
     <mat-label>My notes</mat-label>

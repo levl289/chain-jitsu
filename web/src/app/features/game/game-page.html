@@ -13,7 +13,7 @@
   <section class="setup">
     <h1 class="page-title">Choose your level</h1>
     <p class="page-sub">
-      Belt levels are cumulative. Free-for-all also includes AI-generated cards.
+      Belt levels are cumulative. Free-for-all also includes supplemental cards.
     </p>
 
     <div class="belt-grid">
@@ -128,9 +128,9 @@
             <span class="pc-body">
               <span class="pc-tech">{{ card.technique }}</span>
               <span class="pc-sub">
-                <span class="pc-leads">→ {{ card.leadsTo }}</span>
-                @if (card.aiGenerated) {
-                  <span class="pc-ai" title="AI-generated">AI</span>
+                <span class="pc-leads">→ {{ card.endPosition }}</span>
+                @if (card.supplemental) {
+                  <span class="pc-ai" title="Supplemental — not from the belt-test source">Supp</span>
                 }
               </span>
             </span>
@@ -169,7 +169,7 @@
                 @if (step.points > 0) {
                   <span class="pi-points">+{{ step.points }}</span>
                 }
-                <span class="pi-leads">→ {{ step.card.leadsTo }}</span>
+                <span class="pi-leads">→ {{ step.card.endPosition }}</span>
               </button>
             </li>
           }
