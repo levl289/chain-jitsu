@@ -137,9 +137,13 @@ export class GamePageComponent implements OnInit {
     return this.game.phase() === 'selecting' ? 1 : 2;
   });
 
-  /** Count of synthetic history entries we've pushed to trap the Back button. */
+  /** Depth of synthetic history entries pushed to trap the Back button. */
   private guards = 0;
-  /** True while we're programmatically unwinding history (ignore our own popstate). */
+  /** Last sequence id assigned to a trap entry (monotonic). */
+  private histSeq = 0;
+  /** Sequence id of the history entry currently shown (0 === app's base entry). */
+  private histPos = 0;
+  /** True while we drive history ourselves (unwind/bounce) — ignore our own popstate. */
   private syncing = false;
 
   constructor() {
@@ -158,27 +162,51 @@ export class GamePageComponent implements OnInit {
         return;
       }
       while (this.guards < target) {
-        this.guards++;
-        history.pushState({ btt: 1 }, '');
+        this.pushTrap();
       }
       if (this.guards > target) {
         const excess = this.guards - target;
         this.guards = target;
         this.syncing = true;
-        history.go(-excess);
-        setTimeout(() => (this.syncing = false));
+        history.go(-excess); // the resulting popstate clears `syncing`
       }
     });
   }
 
-  /** Device/browser Back: step up one nav level rather than leaving the app. */
-  @HostListener('window:popstate')
-  onPopState(): void {
+  /** Push a trap entry tagged with a monotonic id so we can tell Back from Forward. */
+  private pushTrap(): void {
+    this.histSeq += 1;
+    this.histPos = this.histSeq;
+    this.guards += 1;
+    history.pushState({ bttSeq: this.histSeq }, '');
+  }
+
+  /**
+   * Device/browser navigation. Back steps up one nav level (run → deck →
+   * selector). Forward is disabled: since a landed id greater than our current
+   * one means the user went forward into an abandoned run/selector entry, we
+   * bounce straight back so it can't take effect.
+   */
+  @HostListener('window:popstate', ['$event'])
+  onPopState(e: PopStateEvent): void {
+    const landed = (e.state as { bttSeq?: number } | null)?.bttSeq ?? 0;
     if (this.syncing) {
+      // This popstate is one we triggered (unwind or forward-bounce). Consume it.
+      this.histPos = landed;
+      this.syncing = false;
       return;
     }
+    if (landed > this.histPos) {
+      // Forward pressed — undo it. history.back() fires a popstate that the
+      // `syncing` branch above consumes, so the forward never takes effect.
+      this.histPos = landed;
+      this.syncing = true;
+      history.back();
+      return;
+    }
+    this.histPos = landed;
     if (this.guards > 0) {
-      this.guards--;
+      this.guards -= 1;
     }
     const level = this.navLevel();
     if (level >= 2) {
