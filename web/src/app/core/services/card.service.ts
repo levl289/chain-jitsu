@@ -17,7 +17,9 @@ import {
 export type Outcome =
   | { type: 'finish'; label: string } // submission / round-ending finish
   | { type: 'node'; node: GameNode } // End Position matches a real playable node
-  | { type: 'open'; label: string }; // reached a state with no concrete follow-up node
+  // Reached a state with no concrete follow-up node. `side` is the side the
+  // acting player ends up on, so only realistic continuations are offered.
+  | { type: 'open'; label: string; side: PlayerRole };
 
 const CSV_URL = 'data/cards.csv';
 
@@ -121,7 +123,26 @@ export class CardService {
     if (this.nodeExists(position, role)) {
       return { type: 'node', node: { position, role } };
     }
-    return { type: 'open', label };
+    return { type: 'open', label, side: this.endingSide(card, label) };
+  }
+
+  /**
+   * Side the acting player ends up on after an unresolved ("open") End Position,
+   * used to offer only realistic continuation positions. A Top/Bottom named in
+   * the label wins; otherwise a sweep reverses to top and every other action
+   * (pass, guard open, defense, transition) keeps the acting player's side.
+   */
+  private endingSide(card: Card, label: string): PlayerRole {
+    if (/\bbottom\b/i.test(label)) {
+      return 'bottom';
+    }
+    if (/\btop\b/i.test(label)) {
+      return 'top';
+    }
+    if (card.class === 'Sweep') {
+      return 'top';
+    }
+    return card.role;
   }
 
   private nodeExists(position: string, role: PlayerRole): boolean {

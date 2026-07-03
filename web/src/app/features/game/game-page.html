@@ -88,7 +88,10 @@
         </mat-card>
       } @else {
         <h2 class="section-title">Pick a starting position</h2>
-        <ng-container [ngTemplateOutlet]="startGrid" />
+        <ng-container
+          [ngTemplateOutlet]="startGrid"
+          [ngTemplateOutletContext]="{ groups: startGroups() }"
+        />
       }
     }
 
@@ -185,9 +188,18 @@
       </mat-card>
 
       @if (game.endReason() === 'open' || game.endReason() === 'stuck') {
-        @if (game.availableStartNodes().length > 0) {
+        @if (continuationGroups().length > 0) {
           <h2 class="section-title">Continue this run from…</h2>
-          <ng-container [ngTemplateOutlet]="startGrid" />
+          @if (game.continuationSide(); as side) {
+            <p class="continue-hint">
+              <mat-icon>subdirectory_arrow_right</mat-icon>
+              Only {{ side }} positions follow from here.
+            </p>
+          }
+          <ng-container
+            [ngTemplateOutlet]="startGrid"
+            [ngTemplateOutletContext]="{ groups: continuationGroups() }"
+          />
         }
       }
     }
@@ -195,9 +207,9 @@
 }
 
 <!-- Start-position grid: positions grouped so top/bottom variants share one split pill. -->
-<ng-template #startGrid>
+<ng-template #startGrid let-groups="groups">
   <div class="node-grid">
-    @for (group of startGroups(); track group.position) {
+    @for (group of groups; track group.position) {
       <div class="node-group" [class.split]="group.roles.length > 1">
         <span class="ng-position">{{ group.position }}</span>
         <div class="role-split">

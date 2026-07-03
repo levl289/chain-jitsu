@@ -26,6 +26,21 @@
   margin: 20px 0 10px;
 }
 
+.continue-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 0 12px;
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.continue-hint mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
 .count-badge {
   background: var(--mat-sys-secondary-container);
   color: var(--mat-sys-on-secondary-container);

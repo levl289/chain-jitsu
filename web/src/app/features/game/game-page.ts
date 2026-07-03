@@ -101,12 +101,12 @@ export class GamePageComponent implements OnInit {
   private readonly roleOrder: PlayerRole[] = ['bottom', 'top', 'neutral'];
 
   /**
-   * Available start nodes grouped by position, so a position with both a top and
-   * bottom variant renders as one split pill instead of two scattered cards.
+   * Groups start nodes by position, so a position with both a top and bottom
+   * variant renders as one split pill instead of two scattered cards.
    */
-  readonly startGroups = computed<StartGroup[]>(() => {
+  private groupStartNodes(items: RoleEntry[]): StartGroup[] {
     const groups = new Map<string, StartGroup>();
-    for (const item of this.game.availableStartNodes()) {
+    for (const item of items) {
       let group = groups.get(item.node.position);
       if (!group) {
         group = { position: item.node.position, roles: [] };
@@ -124,7 +124,17 @@ export class GamePageComponent implements OnInit {
     }
     // Alphabetical by position for a stable, easy-to-scan layout.
     return list.sort((a, b) => a.position.localeCompare(b.position));
-  });
+  }
+
+  /** Every available start node (fresh drill can begin anywhere). */
+  readonly startGroups = computed<StartGroup[]>(() =>
+    this.groupStartNodes(this.game.availableStartNodes()),
+  );
+
+  /** Realistic continuations after an open/stuck end (restricted to the side). */
+  readonly continuationGroups = computed<StartGroup[]>(() =>
+    this.groupStartNodes(this.game.continuationNodes()),
+  );
 
   /**
    * Navigation depth for the device/browser Back button: 0 = level selector,

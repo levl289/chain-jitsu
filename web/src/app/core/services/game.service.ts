@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { BeltLevel, Card, GameNode } from '../models/card.model';
+import { BeltLevel, Card, GameNode, PlayerRole } from '../models/card.model';
 import { CardService, Outcome } from './card.service';
 
 export type GamePhase = 'selecting' | 'playing' | 'ended';
@@ -76,6 +76,29 @@ export class GameService {
         count: this.cardService.legalCards(node, belt, blocked).length,
       }))
       .filter((n) => n.count > 0);
+  });
+
+  /**
+   * When a run ends "open" (or "stuck"), the side the player realistically
+   * continues on. null means no restriction (fresh start / finish).
+   */
+  readonly continuationSide = computed<PlayerRole | null>(() => {
+    const reason = this.endReasonSig();
+    const outcome = this.endOutcomeSig();
+    if (reason === 'open' && outcome?.type === 'open') {
+      return outcome.side;
+    }
+    if (reason === 'stuck' && outcome?.type === 'node') {
+      return outcome.node.role;
+    }
+    return null;
+  });
+
+  /** Start nodes offered to continue a run — restricted to the realistic side. */
+  readonly continuationNodes = computed(() => {
+    const side = this.continuationSide();
+    const nodes = this.availableStartNodes();
+    return side ? nodes.filter((n) => n.node.role === side) : nodes;
   });
 
   /** Legal cards from the current node under the current filters, sorted A–Z by technique. */
