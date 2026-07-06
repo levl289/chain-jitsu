@@ -1,0 +1,5 @@
+# SPA fallback: serve index.html (200, not a redirect) for client-side routes.
+# Real static assets (data/cards.csv, *.js, etc.) are served before this rule,
+# so it only catches app routes like /play and /login on hard reload / deep link.
+# Read by both Cloudflare Pages and Netlify.
+/*    /index.html   200

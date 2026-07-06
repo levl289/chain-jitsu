@@ -1,0 +1,26 @@
+{
+  "v": 1,
+  "kdf": {
+    "name": "PBKDF2",
+    "hash": "SHA-256",
+    "iters": 310000
+  },
+  "users": [
+    {
+      "username": "professor",
+      "displayName": "Professor",
+      "role": "instructor",
+      "salt": "LH9HxEVkWQqRtRXANagDsw==",
+      "wrapIv": "qapIYrylsWRa5lAp",
+      "wrappedKey": "Tv4BFy4FHMAj9quHVcu+d6oRWJ/qG14ijXVzjxqY5rlP5yJrFshplWEczRzLb8Pj"
+    },
+    {
+      "username": "student",
+      "displayName": "Student",
+      "role": "student",
+      "salt": "85vSeqPk2pGqBdh2A/U6eg==",
+      "wrapIv": "ELxgPieMqYje8ScF",
+      "wrappedKey": "uvuJq1DOKXQ0vNPaoT+mnrnQxkLS4xp0E6JEw60x8jFpehFwIx4YDOSNesGoRkHB"
+    }
+  ]
+}
