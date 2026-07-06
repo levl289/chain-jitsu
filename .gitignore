@@ -1,8 +1,15 @@
-# Academy IP and credentials — provided to the app at runtime (uploaded via the
-# CSV endpoint), never committed. Keep these OUT of the public repo.
+# --- Never commit: plaintext academy IP + real passwords (provisioning inputs) ---
+/secrets/
 csv/*.csv
 web/public/data/cards.csv
+
+# --- Never commit to `main`: the encrypted deck + credentials ---
+# These ARE published (to the deploy/gh-pages output) but the source branch
+# stays IP-free. `deck.enc` is ciphertext and `users.json` holds only wrapped
+# keys, but their safety depends on password strength, so keep `main` clean and
+# let the deploy step generate + publish them.
+web/public/data/deck.enc
 web/public/data/users.json
 
-# Design/handoff docs contain example technique rows — kept locally, not public.
+# --- Design/handoff docs contain example technique rows — kept local ---
 docs/

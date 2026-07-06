@@ -37,26 +37,16 @@ export class ProvisioningService {
   }
 
   private async probe(): Promise<boolean> {
-    const [csv, users] = await Promise.all([
-      this.fetchText('data/cards.csv'),
+    const [deck, users] = await Promise.all([
+      this.fetchText('data/deck.enc'),
       this.fetchText('data/users.json'),
     ]);
 
-    const csvOk =
-      !!csv &&
-      !isHtml(csv) &&
-      csv.trim().split(/\r?\n/).filter((l) => l.trim()).length > 1;
-
-    let usersOk = false;
-    if (users && !isHtml(users)) {
-      try {
-        const parsed = JSON.parse(users);
-        const arr = Array.isArray(parsed) ? parsed : parsed?.users;
-        usersOk = Array.isArray(arr) && arr.length > 0;
-      } catch {
-        usersOk = false;
-      }
-    }
+    const csvOk = looksLikeJson(deck, (p) => !!p?.iv && !!p?.ct);
+    const usersOk = looksLikeJson(users, (p) => {
+      const arr = Array.isArray(p) ? p : p?.users;
+      return Array.isArray(arr) && arr.length > 0;
+    });
 
     this.csvPresent.set(csvOk);
     this.usersPresent.set(usersOk);
@@ -76,4 +66,19 @@ export class ProvisioningService {
 
 function isHtml(body: string): boolean {
   return /^﻿?\s*<(?:!doctype|html)/i.test(body);
+}
+
+/** True when `body` parses as JSON and passes `check` — guards against HTML fallbacks. */
+function looksLikeJson(
+  body: string | null,
+  check: (parsed: any) => boolean,
+): boolean {
+  if (!body || isHtml(body)) {
+    return false;
+  }
+  try {
+    return check(JSON.parse(body));
+  } catch {
+    return false;
+  }
 }

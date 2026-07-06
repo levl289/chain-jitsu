@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,7 +26,7 @@ import {
   nodeKey,
   nodeLabel,
 } from '../../core/models/card.model';
-import { CardService } from '../../core/services/card.service';
+import { CardService, DECK_LOCKED } from '../../core/services/card.service';
 import { GameService } from '../../core/services/game.service';
 import { AuthService } from '../../core/services/auth.service';
 import { NotesService } from '../../core/services/notes.service';
@@ -72,6 +73,7 @@ export class GamePageComponent implements OnInit {
   readonly game = inject(GameService);
   private readonly auth = inject(AuthService);
   private readonly notes = inject(NotesService);
+  private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
 
   readonly loadError = signal<string | null>(null);
@@ -230,9 +232,15 @@ export class GamePageComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       await this.cards.load();
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.message === DECK_LOCKED) {
+        // Session without a usable deck key (e.g. logged in before a re-provision).
+        this.auth.logout();
+        this.router.navigate(['/login']);
+        return;
+      }
       this.loadError.set(
-        'Could not load the card deck. Check that data/cards.csv is available.',
+        'Could not unlock the deck. Try signing in again.',
       );
     }
   }

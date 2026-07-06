@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { parseCsv } from '../csv/csv-parser';
@@ -12,6 +12,11 @@ import {
   nodeKey,
   splitPositionRole,
 } from '../models/card.model';
+import { AuthService } from './auth.service';
+import { DeckEnvelope, b64ToBytes, decryptDeck } from '../crypto/deck-crypto';
+
+/** Thrown when the deck can't be decrypted because no valid session key is present. */
+export const DECK_LOCKED = 'DECK_LOCKED';
 
 /** Result of resolving a card's End Position into the next state-machine state. */
 export type Outcome =
@@ -21,10 +26,13 @@ export type Outcome =
   // acting player ends up on, so only realistic continuations are offered.
   | { type: 'open'; label: string; side: PlayerRole };
 
-const CSV_URL = 'data/cards.csv';
+const DECK_URL = 'data/deck.enc';
 
 @Injectable({ providedIn: 'root' })
 export class CardService {
+  private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
+
   private readonly cardsSig = signal<Card[]>([]);
   private readonly loadedSig = signal(false);
   private loadPromise?: Promise<void>;
@@ -48,17 +56,20 @@ export class CardService {
     return [...counts.values()].sort((a, b) => b.count - a.count);
   });
 
-  constructor(private readonly http: HttpClient) {}
-
-  /** Loads and parses the bundled CSV exactly once. */
+  /** Fetches the encrypted deck, decrypts it with the session key, and parses it once. */
   async load(): Promise<void> {
     if (this.loadPromise) {
       return this.loadPromise;
     }
     this.loadPromise = (async () => {
-      const text = await firstValueFrom(
-        this.http.get(CSV_URL, { responseType: 'text' }),
+      const keyB64 = this.auth.deckKeyB64();
+      if (!keyB64) {
+        throw new Error(DECK_LOCKED);
+      }
+      const envelope = await firstValueFrom(
+        this.http.get<DeckEnvelope>(DECK_URL),
       );
+      const text = await decryptDeck(envelope, b64ToBytes(keyB64));
       const rows = parseCsv(text);
       this.cardsSig.set(
         rows.map(toCard).filter((c) => c.position && c.technique),
