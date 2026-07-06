@@ -1,9 +1,12 @@
+// Left inset matches Material's dialog title/content padding (24px) so the
+// chips and position line align with the technique name; the close button keeps
+// a small right inset near the corner.
 .cd-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  padding-top: 4px;
+  padding: 4px 8px 0 24px;
 }
 
 .cd-chips {
@@ -62,6 +65,7 @@
 
 .cd-position {
   margin: 0 0 4px;
+  padding: 0 24px;
   color: var(--mat-sys-on-surface-variant);
   font-size: 0.85rem;
 }
