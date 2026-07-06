@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ProvisioningService } from '../../core/services/provisioning.service';
+import { AuthService } from '../../core/services/auth.service';
 
 /**
  * Shown when the site has no technique library / credentials yet. It doesn't
@@ -106,6 +107,14 @@ import { ProvisioningService } from '../../core/services/provisioning.service';
 export class SetupNeededComponent {
   readonly prov = inject(ProvisioningService);
   private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
+
+  constructor() {
+    // The site has no usable deck, so any stored session + deck key are stale.
+    // Dump them (keeps per-card notes) so a returning user gets a clean login
+    // once it's provisioned again — no manual localStorage clearing / incognito.
+    this.auth.logout();
+  }
 
   readonly checking = signal(false);
 

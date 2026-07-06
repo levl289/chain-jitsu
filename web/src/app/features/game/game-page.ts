@@ -26,7 +26,7 @@ import {
   nodeKey,
   nodeLabel,
 } from '../../core/models/card.model';
-import { CardService, DECK_LOCKED } from '../../core/services/card.service';
+import { CardService } from '../../core/services/card.service';
 import { GameService } from '../../core/services/game.service';
 import { AuthService } from '../../core/services/auth.service';
 import { NotesService } from '../../core/services/notes.service';
@@ -232,16 +232,12 @@ export class GamePageComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       await this.cards.load();
-    } catch (err) {
-      if (err instanceof Error && err.message === DECK_LOCKED) {
-        // Session without a usable deck key (e.g. logged in before a re-provision).
-        this.auth.logout();
-        this.router.navigate(['/login']);
-        return;
-      }
-      this.loadError.set(
-        'Could not unlock the deck. Try signing in again.',
-      );
+    } catch {
+      // Any failure to load or unlock the deck means the stored session + key
+      // are stale (e.g. the site was re-provisioned under a new key). Dump them
+      // and send the user to a clean login instead of a dead error screen.
+      this.auth.logout();
+      this.router.navigate(['/login']);
     }
   }
 
