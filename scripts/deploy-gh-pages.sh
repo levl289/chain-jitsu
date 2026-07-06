@@ -1,31 +1,50 @@
 #!/usr/bin/env bash
-# Painless one-command deploy for GitHub Pages.
-#
-# Builds the app, injects the ENCRYPTED deck + credentials into the build, and
-# publishes the result to the `gh-pages` branch. Your plaintext CSV and user
-# list never get committed — only the ciphertext does.
+# Full deploy to GitHub Pages: build the app, inject the ENCRYPTED deck +
+# credentials, and publish to the `gh-pages` branch as a SINGLE, force-pushed
+# commit. Keeping it to one commit means old encrypted decks never linger in the
+# branch history (an old deck sealed under a weak/revoked password would
+# otherwise stay brute-forceable forever). Your plaintext CSV + user list are
+# never committed — only ciphertext is.
 #
 # Usage:
-#   scripts/deploy-gh-pages.sh <cards.csv> <users.input.json>
+#   scripts/deploy-gh-pages.sh <cards.csv> <users.input.json> [base-href]
 #
-# One-time setup: in the repo's GitHub settings, set Pages to deploy from the
-# `gh-pages` branch (root). After that, re-run this whenever the library or
-# roster changes. To "wipe" the site back to the unprovisioned state, deploy a
-# build without running the provision step (or delete deck.enc/users.json).
+#   base-href defaults to /chain-jitsu/  — correct for a project site served at
+#   https://<user>.github.io/chain-jitsu/. For a custom domain served at the
+#   root, pass  /  as the third argument.
+#
+# One-time: Settings → Pages → Deploy from a branch → gh-pages (root).
+# To wipe the site back to "not set up", deploy without data (or delete
+# deck.enc/users.json from gh-pages).
 set -euo pipefail
 
 CSV="${1:?path to your plaintext cards.csv}"
 USERS="${2:?path to your users.input.json}"
+BASE_HREF="${3:-/chain-jitsu/}"
 cd "$(dirname "$0")/.."
+ORIGIN="$(git remote get-url origin)"
+PUB="web/dist/web/browser"
 
 echo "› Encrypting deck + credentials…"
 node scripts/provision.mjs "$CSV" "$USERS" web/public/data
 
-echo "› Building the app…"
-( cd web && npm ci && npm run build )
+echo "› Building (base-href $BASE_HREF)…"
+( cd web && npm run build -- --base-href "$BASE_HREF" )
 
-echo "› Publishing to gh-pages…"
-npx --yes gh-pages@6 -d web/dist/web/browser -b gh-pages -t   # -t includes dotfiles
+cp "$PUB/index.html" "$PUB/404.html"   # SPA fallback for deep links / refresh on Pages
+touch "$PUB/.nojekyll"                  # don't let Jekyll touch built assets
 
-echo "✓ Deployed. GitHub Pages must be set to serve from the 'gh-pages' branch."
-echo "  The published deck.enc is ciphertext; its safety is your password strength."
+echo "› Publishing single commit to gh-pages…"
+tmp="$(mktemp -d)"
+git -C "$tmp" init -q
+git -C "$tmp" config user.email deploy@localhost
+git -C "$tmp" config user.name deploy
+cp -R "$PUB/." "$tmp/"
+git -C "$tmp" add -A
+git -C "$tmp" commit -q -m "Deploy $(date -u +%FT%TZ)"
+git -C "$tmp" branch -M gh-pages
+git -C "$tmp" push -q --force "$ORIGIN" gh-pages
+rm -rf "$tmp"
+
+echo "✓ Deployed to gh-pages (single commit, force-pushed)."
+echo "  Published deck.enc is ciphertext; its safety is your password strength."
