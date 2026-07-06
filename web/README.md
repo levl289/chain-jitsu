@@ -1,4 +1,4 @@
-# BTT Position Card Game — Web (v1)
+# Chain Jitsu — Web (v1)
 
 A mobile-first Angular + Material 3 study/drilling tool that turns a BJJ position
 CSV into a playable positional **state machine**. v1 ships **Free Draw** mode.
