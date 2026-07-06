@@ -119,11 +119,11 @@ export class CardService {
   }
 
   /**
-   * Resolves the next state after playing `card`. Because the simplified CSV's
-   * End Position is either "Finish" or (often) a real Start Position like
-   * "Mount Top", resolution is a direct node lookup — no alias mapping needed.
-   * An End Position that isn't a playable start node (e.g. "Top Position",
-   * "Standup", "Armbar") resolves to an `open` outcome the player continues manually.
+   * Resolves the next state after playing `card`. The End Position is either
+   * "Finish", a real Start Position like "Mount Top" (direct node lookup), or a
+   * generic landing whose concrete position the IBJJF points imply (see
+   * `resolveGenericLanding`). Anything still unresolved (e.g. "Armbar" or a
+   * defensive recovery) becomes an `open` outcome the player continues manually.
    */
   resolveOutcome(card: Card): Outcome {
     const label = card.endPosition.trim();
@@ -134,7 +134,34 @@ export class CardService {
     if (this.nodeExists(position, role)) {
       return { type: 'node', node: { position, role } };
     }
+    const landing = this.resolveGenericLanding(card);
+    if (landing && this.nodeExists(landing.position, landing.role)) {
+      return { type: 'node', node: landing };
+    }
     return { type: 'open', label, side: this.endingSide(card, label) };
+  }
+
+  /**
+   * Maps a generic sweep/reversal landing to a concrete node using IBJJF points.
+   * A sweep is worth 2, and the remainder is the positional bonus that names the
+   * control: +4 → Mount, +2 → Knee on Belly, +0 → a non-scoring control, which
+   * we take as Side Control (coming up into North-South off a sweep is rare).
+   * "Standup" means back to the feet — re-engaging from the top of open guard.
+   * Returns null when the label isn't a generic landing we resolve this way.
+   */
+  private resolveGenericLanding(card: Card): GameNode | null {
+    switch (card.endPosition.trim().toLowerCase()) {
+      case 'standup':
+        return { position: 'Open Guard', role: 'top' };
+      case 'top position': {
+        const bonus = card.points - 2; // subtract the sweep itself
+        const position =
+          bonus >= 4 ? 'Mount' : bonus >= 2 ? 'Knee on Belly' : 'Side Control';
+        return { position, role: 'top' };
+      }
+      default:
+        return null;
+    }
   }
 
   /**

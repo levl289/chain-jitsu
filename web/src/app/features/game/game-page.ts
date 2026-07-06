@@ -296,13 +296,16 @@ export class GamePageComponent implements OnInit {
   }
 
   endMessage(): string {
+    const outcome = this.game.endOutcome();
     switch (this.game.endReason()) {
       case 'finish':
         return 'Submission finish! 🎉';
       case 'stuck':
         return 'No further cards from that position.';
       case 'open':
-        return 'Reached an open position.';
+        return outcome?.type === 'open'
+          ? `Now in ${outcome.label}.`
+          : 'Reached an open position.';
       case 'stopped':
         return 'Sequence stopped.';
       default:
