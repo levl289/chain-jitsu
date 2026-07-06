@@ -5,8 +5,9 @@ card CSV into a playable positional **state machine**. v1 ships **Free Draw** mo
 
 - **Framework:** Angular 20 (standalone components + signals)
 - **UI kit:** Angular Material (Material 3)
-- **Backend:** none — the deck is read from a bundled CSV; all user state (session,
-  notes, progress) lives in the browser's `localStorage`.
+- **Backend:** none — the deck is read from a CSV **provided at runtime** (not
+  committed to this repo); all user state (session, notes, progress) lives in the
+  browser's `localStorage`.
 
 ## Running locally
 
@@ -15,22 +16,25 @@ npm install
 npm start          # ng serve → http://localhost:4200
 ```
 
-Default logins (see [`public/data/users.json`](public/data/users.json)):
+Auth reads `public/data/users.json`, which is **not committed** (it's git-ignored and
+supplied at runtime). Create one locally to sign in — an array of `{ username,
+password, role }`, where `role` is `instructor` or `student`:
 
-| Username    | Password   | Role       |
-|-------------|------------|------------|
-| `professor` | `changeme` | instructor |
-| `student`   | `changeme` | student    |
+```json
+[{ "username": "you", "password": "set-your-own", "role": "instructor" }]
+```
 
 > ⚠️ Auth is a client-side convenience gate, **not** real security — credentials
-> live in a static JSON file. Don't put anything sensitive in `users.json`.
+> live in a static JSON file readable by anyone who can load the app. Don't reuse a
+> real password here.
 
 ## Editing the game content
 
-Everything the game shows comes from **`public/data/cards.csv`** (one row = one card).
-Edit that file and reload — no code changes needed. The `belt_level` column drives the
-belt filter; a **blank** `belt_level` marks a card as AI-generated (shown only in
-free-for-all, tagged "AI"). To add/remove users, edit `public/data/users.json`.
+Everything the game shows comes from **`public/data/cards.csv`** (one row = one card),
+which is **git-ignored / provided at runtime** — see the schema in the v3 handoff doc.
+Edit that file and reload — no code changes needed. The `Belt Level` column drives the
+belt filter; a **blank** `Belt Level` marks a card as supplemental (shown only in
+free-for-all, tagged "Supp"). To add/remove users, edit `public/data/users.json`.
 
 ## How play works
 

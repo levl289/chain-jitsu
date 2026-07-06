@@ -1,0 +1,8 @@
+# Academy IP and credentials — provided to the app at runtime (uploaded via the
+# CSV endpoint), never committed. Keep these OUT of the public repo.
+csv/*.csv
+web/public/data/cards.csv
+web/public/data/users.json
+
+# Design/handoff docs contain example technique rows — kept locally, not public.
+docs/
